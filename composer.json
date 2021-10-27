@@ -1,0 +1,9 @@
+{
+  "name": "aegee/events-rss-feed",
+  "license": "Apache-2.0",
+  "require": {
+    "suin/php-rss-writer": "^1.6",
+    "ext-curl": "*",
+    "ext-json": "*"
+  }
+}
