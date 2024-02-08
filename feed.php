@@ -6,7 +6,7 @@ use Suin\RSSWriter\Channel;
 use Suin\RSSWriter\Feed;
 use Suin\RSSWriter\Item;
 
-// Configs for MyAEGEE retrieving.
+// Configs for MyAEGEE retriving.
 $config = new stdClass();
 $config->api_url       = "https://my.aegee.eu/api/events?limit=50&offset=0&starts=" . date('Y-m-d');
 $config->cache         = __DIR__ . "/json.cache"; // make this file in same dir
@@ -14,13 +14,13 @@ $config->force_refresh = false; // dev
 $config->refresh       = 60 * 60; // once an hour
 
 
-function retrieve_events_from_myaegee() {
+function retrive_events_from_myaegee() {
 
     global $config;
 
     if ($config->force_refresh || !file_exists($config->cache) || ((time() - filectime($config->cache)) > ($config->refresh) || 0 == filesize($config->cache))) {
 
-        // The cache is invalid or expired, retrieving from MyAEGEE
+        // The cache is invalid or expired, retriving from MyAEGEE
         $ch = curl_init($config->api_url);
 
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
@@ -29,23 +29,25 @@ function retrieve_events_from_myaegee() {
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 
-        $json = curl_exec($ch);
+        $curlcontent = curl_exec($ch);
         curl_close($ch);
 
         $handle = fopen($config->cache, 'wb') or die('no fopen');
 
         // Put the data in cache.
-        fwrite($handle, $json);
+        $json_cache = $curlcontent;
+        fwrite($handle, $json_cache);
         fclose($handle);
     }
     else {
         // The data is cached.
-        $json = file_get_contents($config->cache);
+        $json_cache = file_get_contents($config->cache);
     }
 
+
     // If we have some data, cached or not, return it.
-    if (!empty($json)) {
-        $response = json_decode($json);
+    if (!empty($json_cache)) {
+        $response = json_decode($json_cache);
         return $response->data;
     }
 
@@ -67,7 +69,7 @@ $channel
     ->ttl(60)
     ->appendTo($feed);
 
-$events = retrieve_events_from_myaegee();
+$events = retrive_events_from_myaegee();
 
 
 foreach ($events as $event) {
@@ -81,11 +83,13 @@ foreach ($events as $event) {
 
     $bodies = [];
     foreach ($event->organizing_bodies as $body) {
-        $bodies[] = $body->body_name;
+        $bodies[]= $body->body_name;
     }
 
     //if (!empty($event->image)) {
+
     //    $custom_description .= '<img src="https://my.aegee.eu/media/events/headimages/' . $event->image . '"/>';
+
     //}
 
     $bodies_string = join(' and ', array_filter(array_merge(array(join(', ', array_slice($bodies, 0, -1))), array_slice($bodies, -1)), 'strlen'));
@@ -104,7 +108,7 @@ foreach ($events as $event) {
         //->contentEncoded($custom_description)
         ->url('https://my.aegee.eu/events/' . $event->url)
         ->creator('MyAEGEE')
-        ->pubDate(strtotime($event->created_at))
+        ->pubDate(strtotime($event->application_starts))
         ->guid('https://my.aegee.eu/events/' . $event->id, TRUE)
         ->preferCdata(TRUE) // By this, title and description become CDATA wrapped HTML.
         ->appendTo($channel);
